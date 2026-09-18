@@ -21,7 +21,7 @@ Foram executados testes locais simulados da interface e do build comprimido, inc
 ## Faltando para liberar clientes reais
 
 1. Conferir Cloudflare Pages > Deployments: último deploy `Success`; abrir a URL HTTPS e verificar tela, logo e fontes.
-2. Supabase > Authentication > URL Configuration: definir `Site URL` e adicionar como Redirect URL a URL HTTPS exata do aplicativo, incluindo qualquer domínio alternativo necessário para confirmação e recuperação de senha.
+2. Supabase > Authentication > URL Configuration: **adicionar a URL HTTPS exata do DetailNow à lista Redirect URLs**, incluindo eventual domínio personalizado. Este projeto Supabase é COMPARTILHADO com outros sites: NÃO troque `Site URL` global sem avaliar o efeito nos outros projetos. O DetailNow fornece `emailRedirectTo` e `redirectTo` explícitos nos fluxos de cadastro e recuperação.
 3. Nas configurações do Supabase Auth, revisar política de senha/proteção contra senhas vazadas e configurar SMTP apropriado. O aviso sobre senhas vazadas está ativo no projeto compartilhado.
 4. Criar sua conta no site e cadastrar `Estética Oliveira`. O banco começa vazio; não há cliente nem receita inventados.
 5. Validar confirmação de e-mail, redefinição de senha, criação de um segundo usuário/empresa, separação de dados entre empresas e acesso por dois aparelhos. Confirmar os registros de pagamentos e relatórios.
