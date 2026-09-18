@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#070a12">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self' blob: https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://yncspxfsvlqdnodlsosb.supabase.co wss://yncspxfsvlqdnodlsosb.supabase.co; upgrade-insecure-requests">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="description" content="DetailNow by InfoTech.io — sistema privado de gestão para estéticas automotivas.">
+  <title>DetailNow • by InfoTech.io</title>
+  <link rel="icon" type="image/svg+xml" href="infotech-mark.svg">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Menu principal">
+      <div class="brand"><div class="brand-mark" aria-hidden="true"><img src="infotech-mark.svg" alt=""></div><div><strong>InfoTech<span class="brand-dot">.io</span></strong><small>LOGÍSTICA <i>•</i> TECNOLOGIA</small></div></div>
+      <div class="sidebar-label">ESPAÇO DE TRABALHO</div>
+      <nav id="sidebarNav" class="nav-list" aria-label="Navegação principal"></nav>
+      <div class="sidebar-bottom"><div class="workspace-label">SISTEMA DETAILNOW</div><div class="workspace-summary" id="workspaceSummary"><span class="live-dot"></span><span>Acesso restrito</span></div><div class="sidebar-user"><div class="avatar">IT</div><div><strong id="sidebarCompany">Minha empresa</strong><small id="sidebarAccount">Aguardando acesso</small></div></div></div>
+    </aside>
+    <main class="main-content">
+      <header class="topbar"><div class="topbar-start"><button class="icon-button hamburger" data-action="toggle-menu" aria-label="Abrir menu">☰</button><div class="breadcrumbs">Painel interno <span>/</span> <strong id="breadcrumb">Visão geral</strong></div></div><div class="topbar-actions"><span class="topbar-date" id="topDate"></span><div class="workspace-switch" id="workspaceSwitch" hidden><label class="sr-only" for="workspaceSelect">Empresa</label><select id="workspaceSelect" aria-label="Selecionar empresa"></select></div><button class="btn btn-outline btn-sm account-btn" id="cloudButton" data-cloud-action="open">☁ Entrar</button><button class="btn btn-primary top-new" data-action="new-order"><span class="plus">＋</span> Novo atendimento</button></div></header>
+      <div class="page-content" id="app" aria-live="polite"></div>
+      <footer class="app-footer" id="appFooter">DetailNow • by InfoTech.io • Acesso restrito</footer>
+    </main>
+  </div>
+  <nav id="mobileNav" class="mobile-nav" aria-label="Menu móvel"></nav>
+  <div id="modalRoot"></div>
+  <div id="authRoot"></div>
+  <div id="syncBlocker" class="sync-blocker" hidden><div class="sync-blocker-box" id="syncBlockerText">Sincronizando...</div></div>
+  <div id="toastRoot" aria-live="polite" aria-atomic="true"></div><noscript>Ative o JavaScript para acessar o DetailNow.</noscript>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" defer></script>
+  <script src="bundle.js" defer></script>
+</body>
+</html>
