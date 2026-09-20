@@ -1,0 +1,72 @@
+/* InfoTech.io | versão comercial: catálogo por empresa, acesso restrito e orçamentos para impressão. */
+(() => {
+ 'use strict';
+ const defaults=SERVICES.map(s=>({name:s.name,price:s.price,active:true}));
+ const owner=()=>CLOUD.active&&CLOUD.roleByWorkspace?.[CLOUD.workspace?.id]==='owner';
+ const catalogue=()=>Array.isArray(db.servicesCatalog)?db.servicesCatalog:defaults;
+ const syncServices=()=>SERVICES.splice(0,SERVICES.length,...catalogue().filter(s=>s.active!==false).map(s=>({name:String(s.name),price:Number(s.price)||0})));
+ const style=document.createElement('style');
+ style.textContent=`
+ .page-heading p,.metric-foot,.panel-title p,.welcome-screen>p,.welcome-foot,.info-note,.workspace-summary,.workspace-label,.sidebar-label,.app-footer,.auth-subtitle,.auth-bottom small{display:none!important}
+ #platformAdminShortcut,#ownerInvite{display:none!important}
+ .page-content{min-width:0}.it-services .panel{padding:22px}.it-service-row{display:grid;grid-template-columns:minmax(0,2fr) minmax(130px,1fr) auto;gap:12px;align-items:end;margin:14px 0;padding:13px;border:1px solid #304661;border-radius:12px}
+ .it-service-row .field{min-width:0}.it-service-row input{width:100%;min-width:0}.it-service-actions{display:flex;gap:8px;flex-wrap:wrap}.it-service-hint{font-size:12px;color:#b2c9df}
+ .service-line input[type=number][readonly]{background:rgba(36,52,74,.55);color:#d4e5f8;cursor:default}
+ @media(max-width:900px){.page-content{padding:18px 14px 105px!important}.topbar{padding:10px 14px!important}.heading-actions{flex-wrap:wrap}.modal{max-width:calc(100vw - 20px)!important}.table-scroll{max-width:100%;overflow-x:auto}.main-content{min-width:0}.finance-grid,.metric-grid,.form-grid{min-width:0}}
+ @media(max-width:600px){.topbar-actions{gap:6px;min-width:0}.topbar-date{display:none!important}.top-new{padding:8px!important;font-size:12px!important}.page-heading{flex-direction:column;align-items:stretch!important;gap:12px}.heading-actions{width:100%}.heading-actions>.btn{flex:1;justify-content:center}.metric-grid,.finance-grid,.cards-grid{grid-template-columns:1fr!important}.it-service-row{grid-template-columns:minmax(0,1fr);padding:12px}.it-service-actions{justify-content:stretch}.it-service-actions .btn{flex:1}.service-line{display:grid;grid-template-columns:25px minmax(0,1fr) minmax(92px,110px);gap:7px}.service-line label{min-width:0;overflow-wrap:anywhere}.service-line input[type=number]{width:100%;min-width:0}.modal-backdrop{padding:7px}.modal{width:100%!important;max-height:95dvh!important;overflow:auto}.modal-body{padding:14px!important}.modal-footer{padding:12px!important;gap:8px;flex-wrap:wrap}.right-actions{flex-wrap:wrap}.right-actions .btn{flex:1}.topbar-start{min-width:0}.breadcrumbs{font-size:12px}.mobile-nav{z-index:200}}
+ `;document.head.appendChild(style);
+ const stockIdx=NAV.findIndex(n=>n.id==='stock');if(stockIdx>=0)NAV.splice(stockIdx,1);
+ NAV.push({id:'services',name:'Serviços e preços',icon:'wallet'});
+ const oldNav=renderNav;
+ renderNav=function(){const idx=NAV.findIndex(n=>n.id==='services');let service;
+   if(idx>=0&&!owner())service=NAV.splice(idx,1)[0];
+   try{return oldNav()}finally{if(service)NAV.push(service)}
+ };
+ const oldRender=render;
+ render=function(){if(page==='services'&&!owner())page='dashboard';
+   const result=oldRender();const app=document.getElementById('app');
+   if(CLOUD.active&&page==='services')app.innerHTML=servicePage();
+   app.querySelectorAll('.note').forEach(n=>{if(/Relatório operacional simples:|clientes não precisam criar conta|confira os valores informados|apenas preparada no WhatsApp|saldo exibido não inclui/i.test(n.textContent))n.remove()});
+   return result;
+ };
+ function servicePage(){return `<div class="it-services"><div class="page-heading"><div><div class="eyebrow">CONFIGURAÇÕES</div><h1>Serviços e preços</h1></div></div><section class="panel"><div class="panel-title"><h3>Tabela de preços</h3></div><form id="it-catalog-form"><div id="it-catalog-rows">${catalogue().map((s,i)=>serviceRow(s,i)).join('')}</div><div class="it-service-actions"><button class="btn btn-outline" type="button" id="it-add-service">+ Novo serviço</button><button class="btn btn-primary" type="submit">Salvar alterações</button></div></form></section></div>`}
+ function serviceRow(s,i){return `<div class="it-service-row" data-row><div class="field"><label>Serviço</label><input required maxlength="90" name="service_name" value="${e(s.name)}" placeholder="Nome do serviço"></div><div class="field"><label>Valor (R$)</label><input type="number" name="service_price" value="${e(s.price)}" min="0" max="1000000" step="0.01" required></div><div class="field"><label>Disponibilidade</label><select name="service_active"><option value="true" ${s.active!==false?'selected':''}>Ativo</option><option value="false" ${s.active===false?'selected':''}>Inativo</option></select></div></div>`}
+ document.addEventListener('click',ev=>{if(ev.target?.id!=='it-add-service')return;if(!owner())return;const root=document.getElementById('it-catalog-rows');root.insertAdjacentHTML('beforeend',serviceRow({name:'',price:0,active:true},root.childElementCount));root.lastElementChild.querySelector('input').focus()});
+ document.addEventListener('submit',ev=>{if(ev.target?.id!=='it-catalog-form')return;ev.preventDefault();if(!owner()||CLOUD.blocked)return notice('Somente o proprietário altera os preços.','error');const rows=[...ev.target.querySelectorAll('[data-row]')];if(rows.length>100)return notice('Limite de 100 serviços.','error');
+   const result=rows.map(row=>({name:row.querySelector('[name="service_name"]').value.trim(),price:safeAmt(row.querySelector('[name="service_price"]').value),active:row.querySelector('[name="service_active"]').value==='true'}));
+   if(result.some(s=>!s.name||!Number.isFinite(s.price))||new Set(result.map(s=>s.name.toLocaleLowerCase('pt-BR'))).size!==result.length)return notice('Confira nomes, valores e serviços duplicados.','error');
+   db.servicesCatalog=result;syncServices();save();render();notice('Tabela de preços atualizada.');
+ });
+ const prevSelect=CLOUD.selectWorkspace.bind(CLOUD);
+ CLOUD.selectWorkspace=async function(id){const r=await prevSelect(id);if(!this.active||this.workspace?.id!==id)return r;
+   if(!Array.isArray(db.servicesCatalog)&&owner()&&!this.blocked){db.servicesCatalog=defaults.map(s=>({...s}));save()}
+   syncServices();render();return r;
+ };
+ CLOUD.loadWorkspaces=async function(){
+   const admin=await this.client.rpc('detailnow_is_platform_admin');this.isPlatformAdmin=!admin.error&&admin.data===true;
+   const members=await this.client.from('detailnow_memberships').select('workspace_id,role');
+   if(members.error)throw members.error;
+   this.roleByWorkspace=Object.fromEntries((members.data||[]).map(m=>[m.workspace_id,m.role]));
+   const {data,error}=await this.client.from('detailnow_workspaces').select('id,name,created_at,status').order('created_at',{ascending:true});if(error)throw error;
+   this.workspaces=(data||[]).filter(w=>w.status!=='deleted');const active=this.workspaces.filter(w=>w.status==='active');
+   if(!active.length){this.workspace=null;this.active=false;db=emptyData();syncServices();this.refreshUI();render();this.show(this.workspaces.length?'Estabelecimento suspenso. Contate a InfoTech.io.':'Acesso não autorizado. Solicite o cadastro à InfoTech.io.');return}
+   let preferred=null;try{preferred=localStorage.getItem('detailnow_workspace_id')}catch(_){ }
+   await this.selectWorkspace(active.find(w=>w.id===preferred)?.id||active[0].id);
+ };
+ const oldRefresh=CLOUD.refreshUI.bind(CLOUD);
+ CLOUD.refreshUI=function(){oldRefresh();document.getElementById('platformAdminShortcut')?.remove();const btn=document.getElementById('cloudButton');if(btn){btn.textContent=this.user?'Sair':'Entrar';btn.dataset.cloudAction=this.user?'logout':'open'}const select=document.getElementById('workspaceSwitch');if(select)select.hidden=true};
+ const oldShow=CLOUD.show.bind(CLOUD);
+ CLOUD.show=function(message=''){oldShow(message);const root=document.getElementById('authRoot');root.querySelectorAll('#ownerInvite,#cloudCompany,a[href="admin.html"],.workspace-list').forEach(el=>el.remove());root.querySelectorAll('[value="signup"],[data-cloud-action="signup"]').forEach(el=>el.remove());root.querySelectorAll('button').forEach(b=>{if(/criar conta|cadastro|registrar/i.test(b.textContent)&&!b.closest('#cloudPassword'))b.remove()});root.querySelectorAll('p,small,.auth-message').forEach(p=>{if(/convite|criar conta|dados separados por empresa|sistema funciona/i.test(p.textContent))p.remove()});const title=root.querySelector('.auth-title b');if(title)title.textContent='InfoTech.io';const subtitle=root.querySelector('.auth-title small');if(subtitle)subtitle.textContent='Gestão automotiva';root.querySelectorAll('.auth-title img').forEach(img=>img.src='infotech-mark.svg')};
+ const originalLogin=CLOUD.login.bind(CLOUD);
+ CLOUD.login=function(form){return originalLogin(form,'login')};
+ const prevModal=renderModal;
+ renderModal=function(){const result=prevModal();if(modal?.which==='orderForm'){const f=document.getElementById('orderForm');if(f){f.querySelectorAll('[name^="servicePrice_"]').forEach(inp=>inp.readOnly=!owner());if(!owner()){const c=f.elements.customName?.closest('.field');const p=f.elements.customPrice?.closest('.field');if(c)c.style.display='none';if(p)p.style.display='none';}const section=f.querySelector('.form-section .muted');if(section)section.textContent=owner()?'Valores ajustáveis neste orçamento':'';syncTotal()}}return result};
+ const oldOrderForm=orderFormView;
+ orderFormView=function(){return oldOrderForm().replace('Marque e ajuste os valores','Selecione os serviços').replace('Serviço personalizado (opcional)',owner()?'Serviço personalizado (opcional)':'')};
+ function quoteMarkup(o){const v=veh(o),c=client(o.clientId),business=CLOUD.workspace?.name||'InfoTech.io';const items=o.services.map((s,i)=>`<tr><td class="n">${i+1}</td><td>${e(s.name)}</td><td class="right">${money(s.price)}</td></tr>`).join('');return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Orçamento ${e(o.id)} · ${e(business)}</title><style>
+ @page{size:A4;margin:13mm 14mm}*{box-sizing:border-box}html,body{margin:0;padding:0;background:#fff!important;color:#182539!important;font:12px/1.4 Arial,Helvetica,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}body{max-width:182mm;margin:auto}header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #1759b7;padding:0 0 15px;margin-bottom:20px}.brand{display:flex;gap:11px;align-items:center}.mark{width:44px;height:44px;border:2px solid #1759b7;border-radius:13px;display:grid;place-items:center;font:bold 17px Arial;color:#1759b7}.brand strong{display:block;font-size:17px}.brand small{display:block;font-size:10px;letter-spacing:.08em;color:#4e637d}.number{text-align:right}.number strong{font-size:19px;display:block}.number small{color:#66758a}h1{font-size:22px;margin:0 0 5px}.subtitle{color:#536780;margin:0 0 20px}.details{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}.detail{border:1px solid #dfe6f0;border-radius:8px;padding:12px;min-height:81px}.detail h2{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#2768c2;margin:0 0 7px}.detail div{margin:2px 0}.detail b{color:#182539}table{width:100%;border-collapse:collapse;margin-bottom:0}thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}th{background:#eaf1fb;color:#243b59;text-transform:uppercase;font-size:10px;letter-spacing:.05em;text-align:left;padding:12px 10px;border-bottom:1px solid #c7d8ef}td{padding:11px 10px;border-bottom:1px solid #e5ebf3}td.n{color:#8090a3;width:30px}.right{text-align:right;white-space:nowrap}.summary{display:flex;justify-content:flex-end;margin-top:17px;break-inside:avoid}.total{min-width:220px;background:#eaf1fb;border-radius:9px;padding:13px 16px;display:flex;justify-content:space-between;align-items:center;gap:16px;font-weight:bold}.total strong{font-size:19px;color:#164e9a}.notes{margin-top:20px;border-top:1px solid #dee7f1;padding-top:12px;white-space:pre-wrap;overflow-wrap:anywhere}.footer{margin-top:27px;padding-top:9px;border-top:1px solid #d9e1ec;color:#66758a;font-size:10px;display:flex;justify-content:space-between}@media screen{body{padding:18px;background:white}}@media print{body{padding:0}.no-print{display:none!important}}
+ </style></head><body><header><div class="brand"><div class="mark">IT</div><div><strong>${e(business)}</strong><small>GESTÃO AUTOMOTIVA · INFOTECH.IO</small></div></div><div class="number"><strong>${e(o.id)}</strong><small>Emitido em ${human(o.createdAt||iso())}</small></div></header><h1>Proposta de serviços</h1><p class="subtitle">Orçamento para cuidados e estética automotiva</p><div class="details"><div class="detail"><h2>Cliente</h2><div><b>${e(c?.name||'Cliente')}</b></div>${c?.phone?`<div>${e(c.phone)}</div>`:''}</div><div class="detail"><h2>Veículo</h2><div><b>${e(v.model)}</b> · ${e(o.plate)}</div>${v.color?`<div>Cor: ${e(v.color)}</div>`:''}${o.scheduledDate?`<div>Previsão: ${human(o.scheduledDate)} ${e(o.scheduledTime||'')}</div>`:''}</div></div><table><thead><tr><th class="n">#</th><th>Descrição do serviço</th><th class="right">Valor</th></tr></thead><tbody>${items}</tbody></table><div class="summary"><div class="total"><span>Valor total</span><strong>${money(total(o))}</strong></div></div>${o.notes?`<div class="notes"><b>Observações</b><br>${e(o.notes)}</div>`:''}<div class="footer"><span>${e(business)}</span><span>Proposta ${e(o.id)}</span></div></body></html>`}
+ window.infotechQuoteMarkup=quoteMarkup;
+ document.addEventListener('click',ev=>{const print=ev.target.closest('[data-action="print"]');if(!print)return;ev.preventDefault();ev.stopImmediatePropagation();if(!CLOUD.active)return;const o=db.orders.find(x=>x.id===print.dataset.id||x.id===modal?.id);if(!o)return notice('Orçamento não encontrado.','error');const pop=window.open('','_blank');if(!pop)return notice('Permita a abertura da proposta no navegador.','error');pop.addEventListener('load',()=>{pop.focus();pop.print()},{once:true});pop.document.open();pop.document.write(quoteMarkup(o));pop.document.close();},true);
+ CLOUD.refreshUI();
+})();
