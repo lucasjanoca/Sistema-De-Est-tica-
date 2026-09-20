@@ -14,8 +14,8 @@
     .replaceAll('RELATÓRIO DETAILNOW','RELATÓRIO INFOTECH.IO')
     .replaceAll('DETAILNOW / INFOTECH.IO','INFOTECH.IO / GESTÃO AUTOMOTIVA')
     .replaceAll('O link precisa voltar para este endereço do DetailNow.','O link precisa voltar para este endereço do sistema.');
-  const extension=await text('infotech-custom.js');
-  const url=URL.createObjectURL(new Blob([source+'\n;\n'+extension],{type:'text/javascript'}));
+  const extensions=await Promise.all(['infotech-custom.js','admin-extension.js'].map(text));
+  const url=URL.createObjectURL(new Blob([[source,...extensions].join('\n;\n')],{type:'text/javascript'}));
   const script=document.createElement('script');script.src=url;
   script.onload=()=>URL.revokeObjectURL(url);
   script.onerror=()=>{URL.revokeObjectURL(url);throw Error('Falha ao carregar o aplicativo')};
