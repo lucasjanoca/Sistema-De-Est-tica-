@@ -1,7 +1,7 @@
-/* InfoTech.io: estados de confirmação e acesso; não altera permissões do banco. */
+/* InfoTech.io: status de confirmação independente da situação de acesso. */
 (() => {
  'use strict';
- let snapshot=null,loading=false;
+ let snapshot=null,loading=false,repeat=false;
  const css=document.createElement('style');
  css.textContent='.it-confirmation{margin-left:5px}.it-confirmation.wait{background:#473719;border-color:#8a6629;color:#ffe6a8}.it-confirmation.off{background:#402633;border-color:#884458;color:#ffd7df}.it-confirmation.ok{background:#173c37;border-color:#276953;color:#94e7bb}.it-member-state{display:flex;gap:5px;flex-wrap:wrap;align-items:center}';
  document.head.append(css);
@@ -14,8 +14,8 @@
      const row=rows[index];if(!row)return;
      const badge=row.querySelector('.badge');if(!badge)return;
      const owner=members.find(m=>m.workspace_id===company.id&&m.role==='owner'&&m.email===company.owner_email);
-     if(company.status==='active'){
-       const pending=!owner||!owner.confirmed;
+     if(company.status==='active'&&!row.querySelector('button[data-next="active"]')){
+       const pending=!owner||!owner.confirmed||!owner.active;
        const label=pending?'Pendente de confirmação':'Ativa';
        if(badge.textContent!==label)badge.textContent=label;
        badge.classList.toggle('pause',pending);
@@ -41,7 +41,8 @@
    });
  }
  async function refreshStatus(){
-   if(loading)return;const client=window.__detailnowAdminClient;if(!client)return;
+   if(loading){repeat=true;return;}
+   const client=window.__detailnowAdminClient;if(!client)return;
    loading=true;
    try{
      const {data:{user},error:authError}=await client.auth.getUser();
@@ -51,12 +52,12 @@
      const {data,error}=await client.rpc('detailnow_admin_overview');
      if(error)throw error;snapshot=data;paint();
    }catch(error){console.warn('Não foi possível atualizar situação das contas:',error?.message||'erro desconhecido');}
-   finally{loading=false;}
+   finally{loading=false;if(repeat){repeat=false;refreshStatus();}}
  }
  document.addEventListener('DOMContentLoaded',()=>{
    const companyRows=document.getElementById('companyRows'),members=document.getElementById('members');
-   if(companyRows)new MutationObserver(paint).observe(companyRows,{childList:true});
-   if(members)new MutationObserver(paint).observe(members,{childList:true});
+   if(companyRows)new MutationObserver(refreshStatus).observe(companyRows,{childList:true});
+   if(members)new MutationObserver(refreshStatus).observe(members,{childList:true});
    refreshStatus();
    window.addEventListener('focus',refreshStatus);
    document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshStatus();});
