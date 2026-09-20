@@ -3,7 +3,7 @@
  'use strict';
  const config={url:'https://yncspxfsvlqdnodlsosb.supabase.co',key:'sb_publishable_jALAHHuvrV5oxj2mugWTCQ_stD_vFyN'};
  const $=id=>document.getElementById(id);
- const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
  let client,overview={companies:[],companies_pending:[],staff_pending:[],members:[],activity:[]},busy=false;
  const appUrl=new URL('index.html',document.baseURI).href;
  const companyName=id=>(overview.companies||[]).find(w=>w.id===id)?.name||'Empresa';
@@ -11,7 +11,7 @@
  function showLogin(text){$('adminApp').classList.add('hidden');$('authScreen').classList.remove('hidden');$('logout').classList.add('hidden');if(text)message(text,'error');}
  function showAdmin(){$('authScreen').classList.add('hidden');$('adminApp').classList.remove('hidden');$('logout').classList.remove('hidden');}
  async function rpc(name,args={}){const {data,error}=await client.rpc(name,args);if(error)throw error;return data;}
- async function refresh(){overview=await rpc('detailnow_admin_overview');render();}
+ async function refresh(){const {data,error}=await client.auth.getUser();if(error||!data?.user){showLogin('Sua sessão expirou. Entre novamente.');return;}overview=await rpc('detailnow_admin_overview');render();}
  async function validate(){const {data,error}=await client.auth.getUser();if(error||!data?.user){showLogin();return;}const allowed=await rpc('detailnow_is_platform_admin');if(!allowed){showLogin('Esta conta não possui autorização administrativa.');return;}showAdmin();await refresh();}
  function date(value){return value?new Date(value).toLocaleDateString('pt-BR'):'—';}
  function inviteMail(email,kind,name){const subject=kind==='company'?`Convite para acessar ${name} no InfoTech.io`:`Seu acesso a ${name} no InfoTech.io`;const body=`Olá!\n\nSeu acesso ao sistema InfoTech.io para ${name} foi preparado.\n\nAcesse: ${appUrl}\nEntre ou crie uma conta usando exatamente este e-mail (${email}), confirme o e-mail de cadastro e entre novamente. O estabelecimento será vinculado automaticamente.\n\nAtenção: não envie sua senha para ninguém.\n\nInfoTech.io`;
@@ -28,10 +28,11 @@
   $('members').className=members.length?'':'empty';$('members').innerHTML=members.map(m=>`<div class="invite"><div><strong>${esc(m.email)}</strong><small>${esc(companyName(m.workspace_id))}</small></div><div class="actions"><span class="badge">${m.role==='owner'?'Proprietário':'Funcionário'}</span>${m.role==='editor'?`<button type="button" class="btn btn-danger btn-sm" data-action="remove-staff" data-id="${esc(m.workspace_id)}" data-email="${esc(m.email)}">Remover</button>`:''}</div></div>`).join('')||'Nenhum usuário encontrado.';
   const activity=overview.activity||[];$('activity').innerHTML=activity.map(a=>`<div>${date(a.created_at)} • ${esc(({'company_invited':'Convite de empresa','staff_invited':'Convite de funcionário','company_status':'Alteração do status','invitation_revoked':'Convite revogado','company_invitation_accepted':'Empresa ativada','staff_invitation_accepted':'Funcionário ativado','staff_removed':'Funcionário removido'})[a.action]||a.action)}${a.workspace_id?' • '+esc(companyName(a.workspace_id)):''}</div>`).join('')||'<div>Sem registros.</div>';
  }
- async function perform(fn){if(busy)return;busy=true;document.querySelectorAll('button[type="submit"],button[data-action]').forEach(b=>b.disabled=true);try{await fn();await refresh();}catch(error){message(error?.message||'Falha no Supabase.','error');}finally{busy=false;document.querySelectorAll('button[type="submit"],button[data-action]').forEach(b=>b.disabled=false);}}
+ async function perform(fn){if(busy)return;busy=true;document.querySelectorAll('button[type="submit"],button[data-action]').forEach(b=>b.disabled=true);try{await fn();if(!$('adminApp').classList.contains('hidden'))await refresh();}catch(error){if(error?.message?.includes('permission denied for function detailnow_admin_overview')){const auth=await client.auth.getUser();if(auth.error||!auth.data?.user){showLogin('Sua sessão expirou. Entre novamente.');return;}}message(error?.message||'Falha no Supabase.','error');}finally{busy=false;document.querySelectorAll('button[type="submit"],button[data-action]').forEach(b=>b.disabled=false);}}
  document.addEventListener('DOMContentLoaded',async()=>{
   if(!window.supabase?.createClient){showLogin('Não foi possível carregar o Supabase. Atualize a página.');return;}
   client=window.supabase.createClient(config.url,config.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+  window.__detailnowAdminClient=client;
   try{await validate();}catch(error){showLogin(error?.message||'Falha ao verificar permissões.');}
   $('loginForm').addEventListener('submit',event=>{event.preventDefault();perform(async()=>{const form=event.target;const {error}=await client.auth.signInWithPassword({email:form.elements.email.value.trim(),password:form.elements.password.value});if(error)throw error;await validate();message('Acesso administrativo verificado.','success');});});
   $('logout').addEventListener('click',()=>perform(async()=>{const {error}=await client.auth.signOut();if(error)throw error;showLogin();message('Você saiu da conta.','success');}));
