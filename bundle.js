@@ -14,7 +14,7 @@
     .replaceAll('RELATÓRIO DETAILNOW','RELATÓRIO INFOTECH.IO')
     .replaceAll('DETAILNOW / INFOTECH.IO','INFOTECH.IO / GESTÃO AUTOMOTIVA')
     .replaceAll('O link precisa voltar para este endereço do DetailNow.','O link precisa voltar para este endereço do sistema.');
-  const extensions=await Promise.all(['infotech-custom.js','admin-extension.js','infotech-release.js','logo-fix.js'].map(text));
+  const extensions=await Promise.all(['infotech-custom.js','admin-extension.js','infotech-release.js','logo-fix.js','ui-fixes.js'].map(text));
   const url=URL.createObjectURL(new Blob([[source,...extensions].join('\n;\n')],{type:'text/javascript'}));
   const script=document.createElement('script');script.src=url;
   script.onload=()=>URL.revokeObjectURL(url);
