@@ -3,7 +3,7 @@
  'use strict';
  const config={url:'https://yncspxfsvlqdnodlsosb.supabase.co',key:'sb_publishable_jALAHHuvrV5oxj2mugWTCQ_stD_vFyN'};
  const $=id=>document.getElementById(id);
- const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
+ const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  let client,overview={companies:[],companies_pending:[],staff_pending:[],members:[],activity:[]},busy=false;
  const appUrl=new URL('index.html',document.baseURI).href;
  const companyName=id=>(overview.companies||[]).find(w=>w.id===id)?.name||'Empresa';
