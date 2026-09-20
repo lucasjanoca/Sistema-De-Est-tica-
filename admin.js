@@ -1,11 +1,11 @@
-/* InfoTech.io | painel central; a autorização real vive nas RPCs do Supabase. */
+/* InfoTech.io | painel central; a autorização DE VERDADE vive nas RPCs do Supabase. */
 (() => {
  'use strict';
  const config={url:'https://yncspxfsvlqdnodlsosb.supabase.co',key:'sb_publishable_jALAHHuvrV5oxj2mugWTCQ_stD_vFyN'};
  const $=id=>document.getElementById(id);
- const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
+ const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  let client,overview={companies:[],companies_pending:[],staff_pending:[],members:[],activity:[]},busy=false;
- const appUrl=new URL('index.html',location.href).href;
+ const appUrl=new URL('index.html',document.baseURI).href;
  const companyName=id=>(overview.companies||[]).find(w=>w.id===id)?.name||'Empresa';
  function message(text,kind='info'){$('feedback').innerHTML=`<div class="note ${kind==='error'?'error':kind==='success'?'success':''}">${esc(text)}</div>`;}
  function showLogin(text){$('adminApp').classList.add('hidden');$('authScreen').classList.remove('hidden');$('logout').classList.add('hidden');if(text)message(text,'error');}
@@ -25,8 +25,8 @@
   $('companyInvites').className=cp.length?'':'empty';$('companyInvites').innerHTML=cp.map(i=>pendingItem(i,'company')).join('')||'Nenhum convite pendente.';
   $('staffInvites').className=sp.length?'':'empty';$('staffInvites').innerHTML=sp.map(i=>pendingItem(i,'staff')).join('')||'Nenhum convite pendente.';
   const members=overview.members||[];
-  $('members').className=members.length?'':'empty';$('members').innerHTML=members.map(m=>`<div class="invite"><div><strong>${esc(m.email)}</strong><small>${esc(companyName(m.workspace_id))}</small></div><span class="badge">${m.role==='owner'?'Proprietário':'Funcionário'}</span></div>`).join('')||'Nenhum usuário encontrado.';
-  const activity=overview.activity||[];$('activity').innerHTML=activity.map(a=>`<div>${date(a.created_at)} • ${esc(({'company_invited':'Convite de empresa','staff_invited':'Convite de funcionário','company_status':'Alteração do status','invitation_revoked':'Convite revogado','company_invitation_accepted':'Empresa ativada','staff_invitation_accepted':'Funcionário ativado'})[a.action]||a.action)}${a.workspace_id?' • '+esc(companyName(a.workspace_id)):''}</div>`).join('')||'<div>Sem registros.</div>';
+  $('members').className=members.length?'':'empty';$('members').innerHTML=members.map(m=>`<div class="invite"><div><strong>${esc(m.email)}</strong><small>${esc(companyName(m.workspace_id))}</small></div><div class="actions"><span class="badge">${m.role==='owner'?'Proprietário':'Funcionário'}</span>${m.role==='editor'?`<button type="button" class="btn btn-danger btn-sm" data-action="remove-staff" data-id="${esc(m.workspace_id)}" data-email="${esc(m.email)}">Remover</button>`:''}</div></div>`).join('')||'Nenhum usuário encontrado.';
+  const activity=overview.activity||[];$('activity').innerHTML=activity.map(a=>`<div>${date(a.created_at)} • ${esc(({'company_invited':'Convite de empresa','staff_invited':'Convite de funcionário','company_status':'Alteração do status','invitation_revoked':'Convite revogado','company_invitation_accepted':'Empresa ativada','staff_invitation_accepted':'Funcionário ativado','staff_removed':'Funcionário removido'})[a.action]||a.action)}${a.workspace_id?' • '+esc(companyName(a.workspace_id)):''}</div>`).join('')||'<div>Sem registros.</div>';
  }
  async function perform(fn){if(busy)return;busy=true;document.querySelectorAll('button[type="submit"],button[data-action]').forEach(b=>b.disabled=true);try{await fn();await refresh();}catch(error){message(error?.message||'Falha no Supabase.','error');}finally{busy=false;document.querySelectorAll('button[type="submit"],button[data-action]').forEach(b=>b.disabled=false);}}
  document.addEventListener('DOMContentLoaded',async()=>{
@@ -41,6 +41,7 @@
    const action=button.dataset.action;
    if(action==='status'){const next=button.dataset.next,id=button.dataset.id;const name=companyName(id);if(!confirm(`${next==='suspended'?'Suspender':'Reativar'} ${name}? ${next==='suspended'?'Os funcionários perderão acesso aos dados enquanto estiver suspensa.':'O acesso será restaurado.'}`))return;perform(async()=>{await rpc('detailnow_admin_set_company_status',{p_workspace:id,p_status:next});message(`Status de ${name} atualizado.`, 'success');});}
    if(action==='revoke'){if(!confirm('Revogar este convite? O usuário não conseguirá usá-lo.'))return;perform(async()=>{await rpc('detailnow_admin_revoke_invitation',{p_id:button.dataset.id,p_kind:button.dataset.kind});message('Convite revogado.','success');});}
+   if(action==='remove-staff'){const email=button.dataset.email,company=companyName(button.dataset.id);if(!confirm(`Remover o funcionário ${email} de ${company}? O acesso será revogado.`))return;perform(async()=>{await rpc('detailnow_remove_staff',{p_workspace:button.dataset.id,p_email:email});message('Acesso do funcionário revogado.','success');});}
   });
  });
 })();
