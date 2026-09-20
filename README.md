@@ -1,32 +1,35 @@
-# InfoTech.io • Sistema de gestão automotiva
+# InfoTech.io • Sistema de Gestão Automotiva
 
-Sistema privado para estéticas automotivas: atendimentos em cartões, agenda, clientes, orçamentos, financeiro e relatórios.
+Sistema para múltiplas estéticas automotivas no mesmo site, com dados separados por estabelecimento no Supabase. A interface principal possui atendimentos, agenda, clientes, orçamentos, financeiro e relatórios.
 
-## Publicação
+## Publicação e arquivos
 
-A branch `main` contém `index.html`, `bundle.js`, os fragmentos compactados de aplicação `style.b64` e `code-1.b64` a `code-3.b64`, além de `infotech-custom.js`. O loader aplica ajustes de marca/textos e acrescenta a integração Google. Não edite manualmente os `.b64`. O pacote de fonte legível `detailnow-infotech-producao.zip` entregue anteriormente é uma versão anterior aos ajustes desta data; a referência atual é este repositório.
+A branch `main` contém `index.html`, `bundle.js`, `style.b64`, os fragmentos `code-1.b64` a `code-3.b64`, `infotech-custom.js` e `admin-extension.js`. O loader monta a interface e carrega ambas as extensões; **não edite manualmente os arquivos `.b64`**. `admin.html` e `admin.js` implementam o painel do operador.
 
-A página poderá publicar automaticamente pelo GitHub Pages ou pela Cloudflare Pages, se a respectiva implantação já estiver ativada. O `_headers` somente se aplica à Cloudflare Pages. O envio de commits NÃO confirma que a URL pública já recebeu o último deploy: confira pelo endereço HTTPS e pelo painel da hospedagem.
+O repositório pode ser publicado por GitHub Pages ou Cloudflare Pages. O `_headers` só funciona na Cloudflare. Um commit no GitHub não prova que o deploy público terminou: conferir a URL HTTPS real.
 
-## Alterações de marca e acesso (setembro de 2026)
+## Painel exclusivo InfoTech.io
 
-- Identidade de interface agora `InfoTech.io`; a logo oficial é carregada de `lucasjanoca/InfoTech.io`, arquivo `assets/brand/logo-192.webp`, com fallback para ícone local se não carregar.
-- Botão **Entrar com Google** integrado ao método `supabase.auth.signInWithOAuth({provider:'google'})`, com `redirectTo` explícito para a URL atual. **Só funcionará após a ativação/configuração do provedor Google no Supabase e Google Cloud e a inclusão da URL HTTPS da aplicação em Redirect URLs.** O login ponta a ponta ainda não foi testado.
-- Contas novas: somente uma empresa. A RPC `detailnow_create_workspace` checa, sob trava por usuário, se já existe vínculo ou empresa. Não altere essa checagem. A seleção de empresas do cabeçalho foi ocultada e o formulário de criar nova empresa some ao existir uma empresa.
-- **Dados pré-existentes preservados:** se alguma conta já possuía duas empresas, ambas permanecem no banco e podem ser acessadas pelo menu Conta; não excluir ou mesclar sem decisão expressa do titular. A RPC bloqueia criação de empresas adicionais para essa conta. Nenhum cliente, ordem ou dado foi apagado por esta mudança.
-- Removidos os textos solicitados sobre WhatsApp manual e explicação contábil. Remover a frase NÃO muda o comportamento do WhatsApp: o envio ainda exige ação/confirmação do usuário.
+Abrir `admin.html` na mesma origem HTTPS do site (GitHub Pages: `https://lucasjanoca.github.io/Sistema-De-Est-tica-/admin.html`, após publicação da revisão). O acesso exige sessão válida no Supabase **e** autorização na tabela privada `detailnow_platform_admins` conferida por RPC no servidor. O administrador inicial foi atribuído exclusivamente ao proprietário verificado das duas empresas InfoTech.io e Lucas Janoca De Sousa Feitosa já existentes. Nenhum usuário obtém acesso administrativo ao escrever seu e-mail no navegador ou criar uma empresa chamada InfoTech.io.
 
-## Configuração pendente para o Google
+O operador pode ver a relação de empresas, responsáveis, equipe e quantidades de atendimentos; preparar convites para empresas, convidar/remover funcionários, revogar convites, suspender/reativar estabelecimentos e consultar um histórico básico de operações. **O painel não dá leitura automática de dados privados de clientes de outras empresas**, nem permite editar finanças/atendimentos de terceiros. Se for necessário suporte com dados reais, estabelecer autorização e trilha de auditoria específica.
 
-1. Google Cloud Console: criar/configurar projeto OAuth para aplicação Web, preencher branding/público e criar Client ID/Client Secret. Origens JavaScript autorizadas: origem HTTPS exata do site. Redirect URI autorizada: URL de callback copiada de Supabase > Authentication > Providers > Google (`https://yncspxfsvlqdnodlsosb.supabase.co/auth/v1/callback`).
-2. Supabase > Authentication > Providers > Google: habilitar provedor e cadastrar Client ID/Client Secret **somente no painel**, nunca no GitHub ou código público.
-3. Supabase > Authentication > URL Configuration: acrescentar URL HTTPS exata do sistema em Redirect URLs. O Supabase é compartilhado com outros sites: não alterar Site URL global ou configurações de outros provedores sem revisar impactos.
-4. Testar autenticação Google, retorno à aplicação e dados vinculados à conta correta. Não presumir que identidades com emails iguais estejam vinculadas automaticamente.
+### Fluxo de nova empresa
 
-Documentação oficial: https://supabase.com/docs/guides/auth/social-login/auth-google
+1. No painel, digitar nome do estabelecimento e e-mail do proprietário em “Cadastrar nova empresa”. Um **convite pendente**, não uma conta nem dados falsos, é criado no Supabase. Ele expira em 30 dias.
+2. Usar “Abrir e-mail” no convite para abrir uma mensagem pronta, **confirmar o envio no aplicativo de e-mail**. Não há SMTP/envio automático embutido neste painel.
+3. O proprietário acessa o site, cria uma conta usando **exatamente o e-mail convidado**, confirma o e-mail e faz login. A RPC `detailnow_claim_invitations` verifica o e-mail confirmado e cria a empresa com estado vazio, vinculando esse usuário como `owner`.
+4. Para funcionários, usar “Convidar funcionário”, selecionar o estabelecimento e informar um e-mail diferente, sem vínculo com outra empresa. O usuário confirma esse e-mail e entra para aceitar o acesso automaticamente. O proprietário também encontra uma função simples de convite no menu Conta do sistema. O operador pode revogar convites e remover funcionários, sem excluir a conta Auth de outro aplicativo.
+5. Um usuário comum só pode entrar em **um** estabelecimento. A função anterior de cadastro livre `detailnow_create_workspace` teve seu EXECUTE revogado para `authenticated`; novas empresas são criadas mediante convite. A conta legada que já possuía duas empresas teve **todos os dados preservados** e continua usando o menu Conta para alternar entre elas.
 
-## Banco e segurança
+### Segurança do banco
 
-As tabelas `detailnow_workspaces`, `detailnow_memberships`, `detailnow_state` e `detailnow_daily_backups` usam RLS para dados por empresa; gravações passam pela RPC com revisão para evitar sobrescrita silenciosa. Pontos diários de restauração estão no mesmo banco, e não substituem backup externo nem teste de recuperação. Uma conta já tinha múltiplas empresas ao aplicar a regra; por isso não foi criada uma constraint UNIQUE retroativa que falharia ou exigiria apagar dados. Nova criação é impedida pela RPC atualmente concedida a `authenticated`.
+As tabelas `detailnow_platform_admins`, `detailnow_company_invitations`, `detailnow_member_invitations` e `detailnow_platform_audit` usam RLS padrão-negado, sem privilégios diretos para `anon` e `authenticated`. RPCs `SECURITY DEFINER` conferem identidade e papel explicitamente, com `search_path` vazio. As tabelas originais de estado e backups só permitem leitura para membro de empresa ativa; gravação também verifica status, vínculo e revisão para evitar sobrescrita silenciosa. Suspender empresa não apaga seus dados. Ações administrativas relevantes geram eventos de auditoria.
 
-Antes de cadastrar dados reais, confirmar URL publicada, login Google/e-mail, fluxo de pagamentos, uso em dois dispositivos, retenção/LGPD, cópia fora do Supabase, recuperação de dados, SMTP e proteção contra senhas vazadas. Há um problema antigo de valores de atendimento a corrigir antes de uso comercial. Estoque permanece recurso futuro. Nunca publicar chaves secretas, senhas nem dados de clientes neste repositório.
+**Limitação importante:** os papéis atuais `owner` e `editor` restringem os vínculos por estabelecimento; a função de gravação ainda autoriza ambos a editar o documento JSON inteiro. Bloqueio granular para impedir que funcionários mudem preços requer a futura separação de serviços/preços em tabelas próprias e validações adicionais. Não afirmar que essa restrição já funciona.
+
+## Google e condições antes de liberar clientes reais
+
+O botão Google existe no aplicativo, mas exige configuração do OAuth no Google Cloud e Supabase > Authentication > Providers > Google, mais a URL HTTPS em Authentication > URL Configuration > Redirect URLs. O projeto Supabase é compartilhado com outros aplicativos: não trocar Site URL global, políticas de outros projetos ou publicar Client Secret no GitHub. Guia: https://supabase.com/docs/guides/auth/social-login/auth-google
+
+Ainda faltam validação real de login, e-mail e convite ponta a ponta, testes em dois dispositivos, SMTP adequado, proteção contra senhas vazadas, política de privacidade/LGPD e backup externo com restauração ensaiada. Os pontos de restauração existentes ficam no mesmo banco. A correção do valor de atendimento, a tabela de preços fixos com permissão somente do proprietário, a nova logo específica, o PDF de orçamento e a criação segura das contas solicitadas pelo cliente **não fazem parte desta entrega do painel** e continuam pendentes. Nunca publicar senhas, `service_role`, tokens ou dados de clientes no repositório público.
