@@ -118,7 +118,8 @@
  document.addEventListener('DOMContentLoaded',()=>{
   install();
   if(!window.supabase?.createClient)return;
-  client=window.supabase.createClient(url,key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+  // Reuse the dashboard's Supabase instance to avoid competing token refreshes and anonymous RPCs.
+  client=window.__detailnowAdminClient || window.supabase.createClient(url,key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
   const notice=sessionStorage.getItem('it-admin-notice');if(notice){sessionStorage.removeItem('it-admin-notice');flash(notice);}
   const rows=$('companyRows');if(rows){new MutationObserver(addDeleteButtons).observe(rows,{childList:true});addDeleteButtons();}
   loadCompanies().catch(()=>{});
